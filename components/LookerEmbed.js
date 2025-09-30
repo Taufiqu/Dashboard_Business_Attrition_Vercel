@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 
-export default function LookerEmbed({ embedCode, title = "Analytics Dashboard" }) {
+export default function LookerEmbed({ embedCode, title = "Analytics Dashboard", isCustom = false }) {
   const [isLoading, setIsLoading] = useState(true)
   const [isMounted, setIsMounted] = useState(false)
 
@@ -51,8 +51,18 @@ export default function LookerEmbed({ embedCode, title = "Analytics Dashboard" }
   return (
     <div className="w-full">
       <div className="mb-4">
-        <h2 className="text-2xl font-bold text-gray-900">{title}</h2>
-        <p className="text-sm text-gray-600">Real-time business attrition analytics powered by Google Looker</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">{title}</h2>
+            <p className="text-sm text-gray-600">Real-time business attrition analytics powered by Google Looker</p>
+          </div>
+          {isCustom && (
+            <div className="flex items-center text-sm">
+              <div className="h-2 w-2 bg-blue-400 rounded-full mr-2"></div>
+              <span className="text-blue-600 font-medium">Custom Dashboard</span>
+            </div>
+          )}
+        </div>
       </div>
       
       <div className="relative w-full bg-white rounded-lg shadow-lg overflow-hidden">
@@ -70,7 +80,7 @@ export default function LookerEmbed({ embedCode, title = "Analytics Dashboard" }
           style={{ minHeight: '600px', height: '600px' }}
         >
           <iframe 
-            src="https://lookerstudio.google.com/embed/reporting/1f6d0e32-9c2a-46aa-b5a7-b8e4b29ed806/page/p_ftmd8ridwd"
+            src={embedCode}
             width="100%"
             height="600"
             frameBorder="0"
@@ -83,7 +93,7 @@ export default function LookerEmbed({ embedCode, title = "Analytics Dashboard" }
       </div>
       
       <div className="mt-4 text-xs text-gray-500 text-center">
-        Data is updated in real-time from your business systems
+        {isCustom ? 'Custom dashboard loaded from your embed code' : 'Data is updated in real-time from your business systems'}
       </div>
     </div>
   )

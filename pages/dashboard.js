@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Layout from '../components/Layout'
 import LookerEmbed from '../components/LookerEmbed'
 import ClientOnly from '../components/ClientOnly'
@@ -8,6 +8,17 @@ export default function Dashboard() {
   const [embedCode, setEmbedCode] = useState('')
   const [showEmbedInput, setShowEmbedInput] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
+
+  // Default embed code (your current Looker dashboard)
+  const defaultEmbedCode = 'https://lookerstudio.google.com/embed/reporting/1f6d0e32-9c2a-46aa-b5a7-b8e4b29ed806/page/p_ftmd8ridwd'
+
+  // Load saved embed code on component mount
+  useEffect(() => {
+    const savedEmbedCode = localStorage.getItem('customEmbedCode')
+    if (savedEmbedCode) {
+      setEmbedCode(savedEmbedCode)
+    }
+  }, [])
 
   const handleRefresh = () => {
     setIsRefreshing(true)
@@ -22,9 +33,31 @@ export default function Dashboard() {
     const formData = new FormData(e.target)
     const code = formData.get('embedCode')
     if (code.trim()) {
-      setEmbedCode(code)
+      // Extract src URL from iframe code or use direct URL
+      let embedUrl = code.trim()
+      
+      // If it's iframe HTML, extract the src attribute
+      const srcMatch = code.match(/src="([^"]+)"/i)
+      if (srcMatch) {
+        embedUrl = srcMatch[1]
+      }
+      
+      // Update state and save to localStorage
+      setEmbedCode(embedUrl)
+      localStorage.setItem('customEmbedCode', embedUrl)
       setShowEmbedInput(false)
+      
+      // Show success message
+      alert('Embed code updated successfully!')
+    } else {
+      alert('Please enter a valid embed code or URL')
     }
+  }
+
+  const handleResetToDefault = () => {
+    setEmbedCode('')
+    localStorage.removeItem('customEmbedCode')
+    alert('Reset to default dashboard successfully!')
   }
 
   return (
@@ -46,6 +79,16 @@ export default function Dashboard() {
             <Settings className="h-4 w-4 mr-2" />
             Setup Embed
           </button>
+
+          {embedCode && (
+            <button
+              onClick={handleResetToDefault}
+              className="inline-flex items-center px-3 py-2 border border-orange-300 shadow-sm text-sm leading-4 font-medium rounded-md text-orange-700 bg-orange-50 hover:bg-orange-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Reset Default
+            </button>
+          )}
           
           <button
             onClick={handleRefresh}
@@ -74,15 +117,22 @@ export default function Dashboard() {
           <form onSubmit={handleEmbedCodeSubmit} className="space-y-4">
             <div>
               <label htmlFor="embedCode" className="block text-sm font-medium text-gray-700 mb-2">
-                Paste your Google Looker Studio embed code here:
+                Paste your Google Looker Studio embed code or direct URL:
               </label>
               <textarea
                 id="embedCode"
                 name="embedCode"
                 rows={6}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                placeholder='<iframe src="https://lookerstudio.google.com/embed/reporting/..." frameborder="0" style="border:0" allowfullscreen></iframe>'
+                placeholder='Option 1: Full iframe code:
+                <iframe src="https://lookerstudio.google.com/embed/reporting/..." frameborder="0" style="border:0" allowfullscreen></iframe>
+
+                Option 2: Direct URL only:
+                https://lookerstudio.google.com/embed/reporting/your-report-id/page/your-page-id'
               />
+              <p className="mt-2 text-sm text-gray-500">
+                You can paste either the complete iframe HTML code or just the direct URL from the src attribute.
+              </p>
             </div>
             
             <div className="flex items-center space-x-3">
@@ -118,8 +168,9 @@ export default function Dashboard() {
       {/* Dashboard Content */}
       <div className="bg-white shadow-lg rounded-lg p-6">
         <LookerEmbed 
-          embedCode="true"
+          embedCode={embedCode || defaultEmbedCode}
           title="Business Attrition Analytics"
+          isCustom={!!embedCode}
         />
       </div>
 
