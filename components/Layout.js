@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { BarChart3, Users, TrendingDown, AlertTriangle, Menu, X, Home, BarChart2, Settings } from 'lucide-react'
+import { BarChart3, Users, TrendingDown, AlertTriangle, Menu, X, Home, BarChart2, Settings, Brain } from 'lucide-react'
 
 export default function Layout({ children, currentPage = 'dashboard' }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -7,6 +7,7 @@ export default function Layout({ children, currentPage = 'dashboard' }) {
   const navigation = [
     { name: 'Overview', href: '/', icon: Home, current: currentPage === 'home' },
     { name: 'Analytics Dashboard', href: '/dashboard', icon: BarChart2, current: currentPage === 'dashboard' },
+    { name: 'AI Prediction', href: '/prediction', icon: Brain, current: currentPage === 'prediction' },
     { name: 'Settings', href: '/settings', icon: Settings, current: currentPage === 'settings' },
   ]
 
