@@ -79,62 +79,83 @@ const PredictionForm = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label className={labelClassName}>
-              Age
+              Age: <span className="text-blue-600 font-bold">{formData.Age || 18}</span>
             </label>
             <input
-              type="number"
+              type="range"
               name="Age"
-              value={formData.Age}
+              min="18"
+              max="65"
+              value={formData.Age || 18}
               onChange={handleChange}
-              className={inputClassName}
-              placeholder="Enter age (e.g., 30)"
+              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
               required
             />
+            <div className="flex justify-between text-xs text-gray-500 mt-1">
+              <span>18</span>
+              <span>65</span>
+            </div>
           </div>
 
           <div>
             <label className={labelClassName}>
-              Distance From Home (km)
+              Distance From Home: <span className="text-blue-600 font-bold">{formData.DistanceFromHome || 0} km</span>
             </label>
             <input
-              type="number"
+              type="range"
               name="DistanceFromHome"
-              value={formData.DistanceFromHome}
+              min="0"
+              max="50"
+              value={formData.DistanceFromHome || 0}
               onChange={handleChange}
-              className={inputClassName}
-              placeholder="Enter distance (e.g., 15)"
+              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
               required
             />
+            <div className="flex justify-between text-xs text-gray-500 mt-1">
+              <span>0 km</span>
+              <span>50 km</span>
+            </div>
           </div>
 
           <div>
             <label className={labelClassName}>
-              Monthly Income
+              Monthly Income: <span className="text-blue-600 font-bold">${formData.MonthlyIncome || 1000}</span>
             </label>
             <input
-              type="number"
+              type="range"
               name="MonthlyIncome"
-              value={formData.MonthlyIncome}
+              min="1000"
+              max="20000"
+              step="100"
+              value={formData.MonthlyIncome || 1000}
               onChange={handleChange}
-              className={inputClassName}
-              placeholder="Enter monthly income (e.g., 5000)"
+              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
               required
             />
+            <div className="flex justify-between text-xs text-gray-500 mt-1">
+              <span>$1,000</span>
+              <span>$20,000</span>
+            </div>
           </div>
 
           <div>
             <label className={labelClassName}>
-              Years at Company
+              Years at Company: <span className="text-blue-600 font-bold">{formData.YearsAtCompany || 0} years</span>
             </label>
             <input
-              type="number"
+              type="range"
               name="YearsAtCompany"
-              value={formData.YearsAtCompany}
+              min="0"
+              max="40"
+              value={formData.YearsAtCompany || 0}
               onChange={handleChange}
-              className={inputClassName}
-              placeholder="Enter years (e.g., 3)"
+              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
               required
             />
+            <div className="flex justify-between text-xs text-gray-500 mt-1">
+              <span>0</span>
+              <span>40 years</span>
+            </div>
           </div>
 
           <div>
