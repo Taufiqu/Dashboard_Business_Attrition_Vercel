@@ -86,15 +86,11 @@ export default async function handler(req, res) {
     // --- PERUBAHAN UTAMA: HAPUS SPAWN, GUNAKAN FETCH ---
 
     // Tentukan URL untuk memanggil API Python
-    // Prioritaskan environment variables Vercel
-    const host = process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}`
-      : process.env.NEXT_PUBLIC_VERCEL_URL
-        ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
-        : 'http://localhost:3000'; // Untuk local development
+    // Use the deployed URL directly to avoid SSO issues
+    const pythonApiUrl = req.headers.host 
+      ? `https://${req.headers.host}/api/python/predict`
+      : 'http://localhost:3000/api/python/predict'; // Untuk local development
     
-    // Ini akan memanggil function di api/python/predict.py
-    const pythonApiUrl = `${host}/api/python/predict`;
     console.log('Calling Python ML API at:', pythonApiUrl);
 
     const response = await fetch(pythonApiUrl, {
@@ -102,8 +98,7 @@ export default async function handler(req, res) {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(inputData),
-      timeout: 30000, // Tambahkan timeout 30 detik
+      body: JSON.stringify(inputData)
     });
 
     if (!response.ok) {
@@ -134,13 +129,16 @@ export default async function handler(req, res) {
   } catch (error) {
     // Ini menangkap error 'fetch' (mis. timeout, 500) atau error validasi
     console.error('API error in predict.js:', error);
+    console.error('Attempted to call:', pythonApiUrl);
+    console.error('With input data:', inputData);
     
     // Fallback ke mock prediction jika terjadi error
     const mockResult = generateMockPrediction(req.body || {});
     return res.status(200).json({
       ...mockResult,
       note: 'Using fallback prediction due to internal server error',
-      error_details: error.message
+      error_details: error.message,
+      attempted_url: pythonApiUrl
     });
   }
 }
