@@ -39,8 +39,13 @@ export default async function handler(req, res) {
     const scriptPath = path.join(process.cwd(), 'scripts', 'predict_with_model.py')
     console.log('Script path:', scriptPath)
     
-    // Use the virtual environment Python executable
-    const pythonExe = path.join(process.cwd(), '.venv', 'Scripts', 'python.exe')
+    const isProduction = process.env.NODE_ENV === 'production'
+
+    const pythonExe = isProduction 
+      ? 'python3' 
+      : path.join(process.cwd(), '.venv', 'Scripts', 'python.exe')
+
+    console.log('Using Python executable:', pythonExe)
     
     // Spawn Python process
     const python = spawn(pythonExe, [scriptPath, JSON.stringify(inputData)], {
