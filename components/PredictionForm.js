@@ -1,24 +1,48 @@
 import React, { useState } from 'react'
-import { Calculator, TrendingUp, AlertTriangle, CheckCircle } from 'lucide-react'
+import { Calculator, TrendingUp, AlertTriangle, CheckCircle, Brain, Cog, User, Briefcase, DollarSign, Clock } from 'lucide-react'
 
 const PredictionForm = () => {
   const [formData, setFormData] = useState({
-    Age: '',
-    DistanceFromHome: '',
-    MonthlyIncome: '',
-    YearsAtCompany: '',
-    JobLevel: '',
+    // Essential fields - Required
+    Age: '30',
+    DistanceFromHome: '10',
+    MonthlyIncome: '5000',
+    YearsAtCompany: '5',
+    JobLevel: '2',
     OverTime: 'No',
-    JobSatisfaction: '',
-    WorkLifeBalance: '',
+    JobSatisfaction: '3',
+    WorkLifeBalance: '3',
     Department: 'Research & Development',
     EducationField: 'Life Sciences',
-    MaritalStatus: 'Single'
+    MaritalStatus: 'Single',
+    
+    // Additional fields for ML model with defaults
+    DailyRate: '800',
+    Education: '3',
+    EmployeeNumber: '1',
+    EnvironmentSatisfaction: '3',
+    HourlyRate: '50',
+    JobInvolvement: '3',
+    MonthlyRate: '15000',
+    NumCompaniesWorked: '1',
+    PercentSalaryHike: '15',
+    PerformanceRating: '3',
+    RelationshipSatisfaction: '3',
+    StockOptionLevel: '0',
+    TotalWorkingYears: '10',
+    TrainingTimesLastYear: '2',
+    YearsInCurrentRole: '3',
+    YearsSinceLastPromotion: '1',
+    YearsWithCurrManager: '2',
+    BusinessTravel: 'Travel_Rarely',
+    Gender: 'Male',
+    JobRole: 'Sales Executive'
   })
   
   const [prediction, setPrediction] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [showAdvanced, setShowAdvanced] = useState(false)
 
   // Consistent input styling
   const inputClassName = "w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-colors"
@@ -40,17 +64,57 @@ const PredictionForm = () => {
     setPrediction(null)
 
     try {
+      // Prepare data for API
+      const processedData = { ...formData }
+      
+      // Convert string inputs to numbers for numerical fields
+      const numericalFields = [
+        'Age', 'DailyRate', 'DistanceFromHome', 'Education', 'EmployeeNumber',
+        'EnvironmentSatisfaction', 'HourlyRate', 'JobInvolvement', 'JobLevel',
+        'JobSatisfaction', 'MonthlyIncome', 'MonthlyRate', 'NumCompaniesWorked',
+        'PercentSalaryHike', 'PerformanceRating', 'RelationshipSatisfaction',
+        'StockOptionLevel', 'TotalWorkingYears', 'TrainingTimesLastYear',
+        'WorkLifeBalance', 'YearsAtCompany', 'YearsInCurrentRole',
+        'YearsSinceLastPromotion', 'YearsWithCurrManager'
+      ]
+
+      numericalFields.forEach(field => {
+        if (processedData[field] !== '' && processedData[field] !== null) {
+          processedData[field] = parseFloat(processedData[field]) || 0
+        }
+      })
+
+      // Set default values for required ML model fields
+      processedData.EmployeeCount = 1;
+      processedData.StandardHours = 80;
+
+      // Set default EmployeeId if not provided
+      if (!processedData.EmployeeId && !processedData.EmployeeNumber) {
+        processedData.EmployeeNumber = Math.floor(Math.random() * 10000) + 1;
+      }
+      
+      // Calculate derived fields if not provided
+      if (!processedData.TotalWorkingYears || processedData.TotalWorkingYears === 0) {
+        processedData.TotalWorkingYears = Math.max(processedData.YearsAtCompany || 0, (processedData.Age || 25) - 18)
+      }
+      if (!processedData.YearsInCurrentRole || processedData.YearsInCurrentRole === 0) {
+        processedData.YearsInCurrentRole = Math.min(processedData.YearsAtCompany || 0, 5)
+      }
+      if (!processedData.YearsWithCurrManager || processedData.YearsWithCurrManager === 0) {
+        processedData.YearsWithCurrManager = Math.min(processedData.YearsAtCompany || 0, 3)
+      }
+
       const response = await fetch('/api/predict', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(processedData)
       })
 
       const result = await response.json()
 
-      if (result.success) {
+      if (result.success !== false) {
         setPrediction(result)
       } else {
         setError(result.error || 'Prediction failed')
@@ -70,216 +134,347 @@ const PredictionForm = () => {
 
   return (
     <div className="bg-white p-8 rounded-xl shadow-lg border border-gray-100">
-      <div className="flex items-center mb-8">
-        <Calculator className="w-7 h-7 text-blue-600 mr-3" />
-        <h2 className="text-2xl font-bold text-gray-800">Attrition Risk Prediction</h2>
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center">
+          <Calculator className="w-7 h-7 text-blue-600 mr-3" />
+          <h2 className="text-2xl font-bold text-gray-800">Employee Attrition Risk Prediction</h2>
+        </div>
+        
+        <button
+          type="button"
+          onClick={() => setShowAdvanced(!showAdvanced)}
+          className="flex items-center space-x-2 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+        >
+          <Cog className="w-4 h-4" />
+          <span>{showAdvanced ? 'Simple View' : 'Advanced View'}</span>
+        </button>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className={labelClassName}>
-              Age: <span className="text-blue-600 font-bold">{formData.Age || 18}</span>
-            </label>
-            <input
-              type="range"
-              name="Age"
-              min="18"
-              max="65"
-              value={formData.Age || 18}
-              onChange={handleChange}
-              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-              required
-            />
-            <div className="flex justify-between text-xs text-gray-500 mt-1">
-              <span>18</span>
-              <span>65</span>
+      <form onSubmit={handleSubmit} className="space-y-8">
+        {/* Essential Employee Information */}
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg border border-blue-200">
+          <div className="flex items-center mb-4">
+            <User className="w-5 h-5 text-blue-600 mr-2" />
+            <h3 className="text-lg font-semibold text-gray-800">Personal Information</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div>
+              <label className={labelClassName}>
+                Age: <span className="text-blue-600 font-bold">{formData.Age}</span>
+              </label>
+              <input
+                type="range"
+                name="Age"
+                min="18"
+                max="65"
+                value={formData.Age}
+                onChange={handleChange}
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                required
+              />
+              <div className="flex justify-between text-xs text-gray-500 mt-1">
+                <span>18</span>
+                <span>65</span>
+              </div>
+            </div>
+
+            <div>
+              <label className={labelClassName}>
+                Distance From Home: <span className="text-blue-600 font-bold">{formData.DistanceFromHome} km</span>
+              </label>
+              <input
+                type="range"
+                name="DistanceFromHome"
+                min="1"
+                max="50"
+                value={formData.DistanceFromHome}
+                onChange={handleChange}
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                required
+              />
+              <div className="flex justify-between text-xs text-gray-500 mt-1">
+                <span>1 km</span>
+                <span>50 km</span>
+              </div>
+            </div>
+
+            <div>
+              <label className={labelClassName}>Gender</label>
+              <select
+                name="Gender"
+                value={formData.Gender}
+                onChange={handleChange}
+                className={selectClassName}
+              >
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+              </select>
             </div>
           </div>
+        </div>
 
-          <div>
-            <label className={labelClassName}>
-              Distance From Home: <span className="text-blue-600 font-bold">{formData.DistanceFromHome || 0} km</span>
-            </label>
-            <input
-              type="range"
-              name="DistanceFromHome"
-              min="0"
-              max="50"
-              value={formData.DistanceFromHome || 0}
-              onChange={handleChange}
-              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-              required
-            />
-            <div className="flex justify-between text-xs text-gray-500 mt-1">
-              <span>0 km</span>
-              <span>50 km</span>
+        {/* Work Information */}
+        <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-lg border border-green-200">
+          <div className="flex items-center mb-4">
+            <Briefcase className="w-5 h-5 text-green-600 mr-2" />
+            <h3 className="text-lg font-semibold text-gray-800">Work Information</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div>
+              <label className={labelClassName}>
+                Years at Company: <span className="text-blue-600 font-bold">{formData.YearsAtCompany} years</span>
+              </label>
+              <input
+                type="range"
+                name="YearsAtCompany"
+                min="0"
+                max="40"
+                value={formData.YearsAtCompany}
+                onChange={handleChange}
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                required
+              />
+              <div className="flex justify-between text-xs text-gray-500 mt-1">
+                <span>0</span>
+                <span>40 years</span>
+              </div>
+            </div>
+
+            <div>
+              <label className={labelClassName}>Job Level</label>
+              <select
+                name="JobLevel"
+                value={formData.JobLevel}
+                onChange={handleChange}
+                className={selectClassName}
+                required
+              >
+                <option value="1">Level 1 - Entry</option>
+                <option value="2">Level 2 - Junior</option>
+                <option value="3">Level 3 - Senior</option>
+                <option value="4">Level 4 - Lead</option>
+                <option value="5">Level 5 - Manager</option>
+              </select>
+            </div>
+
+            <div>
+              <label className={labelClassName}>Department</label>
+              <select
+                name="Department"
+                value={formData.Department}
+                onChange={handleChange}
+                className={selectClassName}
+                required
+              >
+                <option value="Research & Development">Research & Development</option>
+                <option value="Sales">Sales</option>
+                <option value="Human Resources">Human Resources</option>
+              </select>
+            </div>
+
+            <div>
+              <label className={labelClassName}>Job Role</label>
+              <select
+                name="JobRole"
+                value={formData.JobRole}
+                onChange={handleChange}
+                className={selectClassName}
+              >
+                <option value="Sales Executive">Sales Executive</option>
+                <option value="Research Scientist">Research Scientist</option>
+                <option value="Laboratory Technician">Laboratory Technician</option>
+                <option value="Manufacturing Director">Manufacturing Director</option>
+                <option value="Healthcare Representative">Healthcare Representative</option>
+                <option value="Manager">Manager</option>
+                <option value="Sales Representative">Sales Representative</option>
+                <option value="Research Director">Research Director</option>
+                <option value="Human Resources">Human Resources</option>
+              </select>
+            </div>
+
+            <div>
+              <label className={labelClassName}>Over Time</label>
+              <select
+                name="OverTime"
+                value={formData.OverTime}
+                onChange={handleChange}
+                className={selectClassName}
+              >
+                <option value="No">No</option>
+                <option value="Yes">Yes</option>
+              </select>
+            </div>
+
+            <div>
+              <label className={labelClassName}>Business Travel</label>
+              <select
+                name="BusinessTravel"
+                value={formData.BusinessTravel}
+                onChange={handleChange}
+                className={selectClassName}
+              >
+                <option value="Travel_Rarely">Travel Rarely</option>
+                <option value="Travel_Frequently">Travel Frequently</option>
+                <option value="Non-Travel">Non-Travel</option>
+              </select>
             </div>
           </div>
+        </div>
 
-          <div>
-            <label className={labelClassName}>
-              Monthly Income: <span className="text-blue-600 font-bold">${formData.MonthlyIncome || 1000}</span>
-            </label>
-            <input
-              type="range"
-              name="MonthlyIncome"
-              min="1000"
-              max="20000"
-              step="100"
-              value={formData.MonthlyIncome || 1000}
-              onChange={handleChange}
-              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-              required
-            />
-            <div className="flex justify-between text-xs text-gray-500 mt-1">
-              <span>$1,000</span>
-              <span>$20,000</span>
+        {/* Compensation */}
+        <div className="bg-gradient-to-r from-yellow-50 to-amber-50 p-6 rounded-lg border border-yellow-200">
+          <div className="flex items-center mb-4">
+            <DollarSign className="w-5 h-5 text-yellow-600 mr-2" />
+            <h3 className="text-lg font-semibold text-gray-800">Compensation</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className={labelClassName}>
+                Monthly Income: <span className="text-blue-600 font-bold">${formData.MonthlyIncome}</span>
+              </label>
+              <input
+                type="range"
+                name="MonthlyIncome"
+                min="1000"
+                max="20000"
+                step="100"
+                value={formData.MonthlyIncome}
+                onChange={handleChange}
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                required
+              />
+              <div className="flex justify-between text-xs text-gray-500 mt-1">
+                <span>$1,000</span>
+                <span>$20,000</span>
+              </div>
             </div>
           </div>
+        </div>
 
-          <div>
-            <label className={labelClassName}>
-              Years at Company: <span className="text-blue-600 font-bold">{formData.YearsAtCompany || 0} years</span>
-            </label>
-            <input
-              type="range"
-              name="YearsAtCompany"
-              min="0"
-              max="40"
-              value={formData.YearsAtCompany || 0}
-              onChange={handleChange}
-              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-              required
-            />
-            <div className="flex justify-between text-xs text-gray-500 mt-1">
-              <span>0</span>
-              <span>40 years</span>
+        {/* Job Satisfaction */}
+        <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-lg border border-purple-200">
+          <div className="flex items-center mb-4">
+            <Clock className="w-5 h-5 text-purple-600 mr-2" />
+            <h3 className="text-lg font-semibold text-gray-800">Job Satisfaction & Work-Life Balance</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div>
+              <label className={labelClassName}>Job Satisfaction (1-4)</label>
+              <select
+                name="JobSatisfaction"
+                value={formData.JobSatisfaction}
+                onChange={handleChange}
+                className={selectClassName}
+                required
+              >
+                <option value="1">1 - Low</option>
+                <option value="2">2 - Medium</option>
+                <option value="3">3 - High</option>
+                <option value="4">4 - Very High</option>
+              </select>
+            </div>
+
+            <div>
+              <label className={labelClassName}>Work Life Balance (1-4)</label>
+              <select
+                name="WorkLifeBalance"
+                value={formData.WorkLifeBalance}
+                onChange={handleChange}
+                className={selectClassName}
+                required
+              >
+                <option value="1">1 - Bad</option>
+                <option value="2">2 - Good</option>
+                <option value="3">3 - Better</option>
+                <option value="4">4 - Best</option>
+              </select>
+            </div>
+
+            <div>
+              <label className={labelClassName}>Environment Satisfaction</label>
+              <select
+                name="EnvironmentSatisfaction"
+                value={formData.EnvironmentSatisfaction}
+                onChange={handleChange}
+                className={selectClassName}
+              >
+                <option value="1">1 - Low</option>
+                <option value="2">2 - Medium</option>
+                <option value="3">3 - High</option>
+                <option value="4">4 - Very High</option>
+              </select>
+            </div>
+
+            <div>
+              <label className={labelClassName}>Job Involvement</label>
+              <select
+                name="JobInvolvement"
+                value={formData.JobInvolvement}
+                onChange={handleChange}
+                className={selectClassName}
+              >
+                <option value="1">1 - Low</option>
+                <option value="2">2 - Medium</option>
+                <option value="3">3 - High</option>
+                <option value="4">4 - Very High</option>
+              </select>
             </div>
           </div>
+        </div>
 
-          <div>
-            <label className={labelClassName}>
-              Job Level
-            </label>
-            <select
-              name="JobLevel"
-              value={formData.JobLevel}
-              onChange={handleChange}
-              className={selectClassName}
-              required
-            >
-              <option value="">Select Job Level</option>
-              <option value="1">Level 1 - Entry</option>
-              <option value="2">Level 2 - Junior</option>
-              <option value="3">Level 3 - Senior</option>
-              <option value="4">Level 4 - Lead</option>
-              <option value="5">Level 5 - Manager</option>
-            </select>
+        {/* Personal Details */}
+        <div className="bg-gradient-to-r from-gray-50 to-slate-50 p-6 rounded-lg border border-gray-200">
+          <div className="flex items-center mb-4">
+            <User className="w-5 h-5 text-gray-600 mr-2" />
+            <h3 className="text-lg font-semibold text-gray-800">Personal Details</h3>
           </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+              <label className={labelClassName}>Education Field</label>
+              <select
+                name="EducationField"
+                value={formData.EducationField}
+                onChange={handleChange}
+                className={selectClassName}
+              >
+                <option value="Life Sciences">Life Sciences</option>
+                <option value="Medical">Medical</option>
+                <option value="Marketing">Marketing</option>
+                <option value="Technical Degree">Technical Degree</option>
+                <option value="Other">Other</option>
+                <option value="Human Resources">Human Resources</option>
+              </select>
+            </div>
 
-          <div>
-            <label className={labelClassName}>
-              Over Time
-            </label>
-            <select
-              name="OverTime"
-              value={formData.OverTime}
-              onChange={handleChange}
-              className={selectClassName}
-            >
-              <option value="No">No</option>
-              <option value="Yes">Yes</option>
-            </select>
-          </div>
+            <div>
+              <label className={labelClassName}>Marital Status</label>
+              <select
+                name="MaritalStatus"
+                value={formData.MaritalStatus}
+                onChange={handleChange}
+                className={selectClassName}
+              >
+                <option value="Single">Single</option>
+                <option value="Married">Married</option>
+                <option value="Divorced">Divorced</option>
+              </select>
+            </div>
 
-          <div>
-            <label className={labelClassName}>
-              Job Satisfaction (1-4)
-            </label>
-            <select
-              name="JobSatisfaction"
-              value={formData.JobSatisfaction}
-              onChange={handleChange}
-              className={selectClassName}
-              required
-            >
-              <option value="">Select Satisfaction Level</option>
-              <option value="1">1 - Low</option>
-              <option value="2">2 - Medium</option>
-              <option value="3">3 - High</option>
-              <option value="4">4 - Very High</option>
-            </select>
-          </div>
-
-          <div>
-            <label className={labelClassName}>
-              Work Life Balance (1-4)
-            </label>
-            <select
-              name="WorkLifeBalance"
-              value={formData.WorkLifeBalance}
-              onChange={handleChange}
-              className={selectClassName}
-              required
-            >
-              <option value="">Select Balance Level</option>
-              <option value="1">1 - Bad</option>
-              <option value="2">2 - Good</option>
-              <option value="3">3 - Better</option>
-              <option value="4">4 - Best</option>
-            </select>
-          </div>
-
-          <div>
-            <label className={labelClassName}>
-              Department
-            </label>
-            <select
-              name="Department"
-              value={formData.Department}
-              onChange={handleChange}
-              className={selectClassName}
-            >
-              <option value="Research & Development">Research & Development</option>
-              <option value="Sales">Sales</option>
-              <option value="Human Resources">Human Resources</option>
-            </select>
-          </div>
-
-          <div>
-            <label className={labelClassName}>
-              Education Field
-            </label>
-            <select
-              name="EducationField"
-              value={formData.EducationField}
-              onChange={handleChange}
-              className={selectClassName}
-            >
-              <option value="Life Sciences">Life Sciences</option>
-              <option value="Medical">Medical</option>
-              <option value="Marketing">Marketing</option>
-              <option value="Technical Degree">Technical Degree</option>
-              <option value="Other">Other</option>
-              <option value="Human Resources">Human Resources</option>
-            </select>
-          </div>
-
-          <div>
-            <label className={labelClassName}>
-              Marital Status
-            </label>
-            <select
-              name="MaritalStatus"
-              value={formData.MaritalStatus}
-              onChange={handleChange}
-              className={selectClassName}
-            >
-              <option value="Single">Single</option>
-              <option value="Married">Married</option>
-              <option value="Divorced">Divorced</option>
-            </select>
+            <div>
+              <label className={labelClassName}>Education Level</label>
+              <select
+                name="Education"
+                value={formData.Education}
+                onChange={handleChange}
+                className={selectClassName}
+              >
+                <option value="1">1 - Below College</option>
+                <option value="2">2 - College</option>
+                <option value="3">3 - Bachelor</option>
+                <option value="4">4 - Master</option>
+                <option value="5">5 - Doctor</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -311,7 +506,7 @@ const PredictionForm = () => {
         </div>
       )}
 
-      {prediction && prediction.success && (
+      {prediction && prediction.success !== false && (
         <div className="mt-8 p-6 bg-gray-50 rounded-xl border border-gray-200">
           <h3 className="text-xl font-bold text-gray-800 mb-4">Prediction Result</h3>
           
@@ -319,20 +514,21 @@ const PredictionForm = () => {
             <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
               <div className="flex items-center mb-3">
                 {(() => {
-                  const risk = getRiskLevel(prediction.attrition_probability)
+                  const probability = prediction.probability?.will_leave || 0
+                  const risk = getRiskLevel(probability)
                   const IconComponent = risk.icon
                   return (
                     <>
                       <IconComponent className={`w-6 h-6 ${risk.color} mr-3`} />
                       <span className={`font-bold text-lg ${risk.color}`}>
-                        {risk.level} Risk
+                        {prediction.risk_level || risk.level} Risk
                       </span>
                     </>
                   )
                 })()}
               </div>
               <p className="text-3xl font-bold text-gray-800 mb-1">
-                {(prediction.attrition_probability * 100).toFixed(1)}%
+                {((prediction.probability?.will_leave || 0) * 100).toFixed(1)}%
               </p>
               <p className="text-gray-600">Attrition Probability</p>
             </div>
@@ -342,39 +538,93 @@ const PredictionForm = () => {
               <div className="space-y-2 text-sm">
                 <p>
                   <span className="font-medium text-gray-700">Model:</span> 
-                  <span className="text-gray-600 ml-2">{prediction.model_info?.name || 'Unknown'}</span>
-                </p>
-                <p>
-                  <span className="font-medium text-gray-700">Version:</span> 
-                  <span className="text-gray-600 ml-2">{prediction.model_info?.version || 'Unknown'}</span>
+                  <span className="text-gray-600 ml-2">
+                    {prediction.model_type || 'ML Model'}
+                  </span>
                 </p>
                 <p>
                   <span className="font-medium text-gray-700">Prediction:</span> 
-                  <span className={`ml-2 font-medium ${prediction.prediction === 1 ? 'text-red-600' : 'text-green-600'}`}>
-                    {prediction.prediction === 1 ? 'Will Leave' : 'Will Stay'}
+                  <span className={`ml-2 font-medium ${
+                    prediction.prediction === 1 ? 'text-red-600' : 'text-green-600'
+                  }`}>
+                    {prediction.prediction_label || (prediction.prediction === 1 ? 'Will Leave' : 'Will Stay')}
                   </span>
                 </p>
+                {prediction.confidence && (
+                  <p>
+                    <span className="font-medium text-gray-700">Confidence:</span> 
+                    <span className="text-gray-600 ml-2">{(prediction.confidence * 100).toFixed(1)}%</span>
+                  </p>
+                )}
+                {prediction.note && (
+                  <p className="text-xs text-blue-600 mt-2">
+                    <span className="font-medium">Note:</span> {prediction.note}
+                  </p>
+                )}
               </div>
             </div>
           </div>
 
-          {prediction.feature_importance && (
+          {/* Probability Breakdown */}
+          {prediction.probability && (
+            <div className="mt-6 bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+              <h4 className="font-bold text-gray-800 mb-4">Probability Breakdown</h4>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-700">Will Stay:</span>
+                  <div className="flex items-center space-x-3">
+                    <div className="w-40 bg-gray-200 rounded-full h-3">
+                      <div 
+                        className="bg-green-500 h-3 rounded-full transition-all duration-500" 
+                        style={{width: `${prediction.probability.will_stay * 100}%`}}
+                      ></div>
+                    </div>
+                    <span className="text-sm font-medium text-green-600">
+                      {(prediction.probability.will_stay * 100).toFixed(1)}%
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-700">Will Leave:</span>
+                  <div className="flex items-center space-x-3">
+                    <div className="w-40 bg-gray-200 rounded-full h-3">
+                      <div 
+                        className="bg-red-500 h-3 rounded-full transition-all duration-500" 
+                        style={{width: `${prediction.probability.will_leave * 100}%`}}
+                      ></div>
+                    </div>
+                    <span className="text-sm font-medium text-red-600">
+                      {(prediction.probability.will_leave * 100).toFixed(1)}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Feature Importance */}
+          {(prediction.top_feature_importance || prediction.feature_importance) && (
             <div className="mt-6 bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
               <h4 className="font-bold text-gray-800 mb-4">Key Contributing Factors</h4>
               <div className="space-y-3">
-                {Object.entries(prediction.feature_importance)
-                  .sort(([,a], [,b]) => Math.abs(b) - Math.abs(a))
-                  .slice(0, 5)
-                  .map(([feature, importance]) => (
+                {(() => {
+                  const features = prediction.top_feature_importance || prediction.feature_importance
+                  const featureEntries = Object.entries(features)
+                    .filter(([_, importance]) => importance > 0)
+                    .sort(([,a], [,b]) => b - a)
+                    .slice(0, 6)
+                  
+                  return featureEntries.map(([feature, importance]) => (
                     <div key={feature} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                      <span className="font-medium text-gray-700">{feature}</span>
-                      <span className={`font-bold px-3 py-1 rounded-full text-sm ${
-                        importance > 0 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
-                      }`}>
-                        {importance > 0 ? '+' : ''}{(importance * 100).toFixed(1)}%
+                      <span className="font-medium text-gray-700 text-sm">
+                        {feature.replace(/_/g, ' ').replace(/([A-Z])/g, ' $1').trim()}
+                      </span>
+                      <span className="font-bold px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-700">
+                        {(importance * 100).toFixed(1)}%
                       </span>
                     </div>
-                  ))}
+                  ))
+                })()}
               </div>
             </div>
           )}
