@@ -83,53 +83,64 @@ export default async function handler(req, res) {
       }
     }
 
-    // --- PERUBAHAN UTAMA: HAPUS SPAWN, GUNAKAN FETCH ---
-
-    // Tentukan URL untuk memanggil API Python
-    // Use the deployed URL directly to avoid SSO issues
-    const pythonApiUrl = req.headers.host 
-      ? `https://${req.headers.host}/api/python/predict`
-      : 'http://localhost:3000/api/python/predict'; // Untuk local development
+    // --- SIMPLIFIED APPROACH: Skip the fetch call for now and use rule-based logic directly ---
     
-    console.log('Calling Python ML API at:', pythonApiUrl);
-
-    const response = await fetch(pythonApiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+    // For now, let's use the same rule-based logic as the Python API
+    // This avoids the internal networking issues between serverless functions
+    
+    console.log('Using integrated rule-based prediction logic');
+    
+    // Simple rule-based prediction (same logic as Python API)
+    let riskScore = 0.0;
+    
+    const age = inputData.Age || 30;
+    const income = inputData.MonthlyIncome || 5000;
+    const overtime = inputData.OverTime || 'No';
+    const distance = inputData.DistanceFromHome || 5;
+    const jobSatisfaction = inputData.JobSatisfaction || 3;
+    const workLifeBalance = inputData.WorkLifeBalance || 3;
+    const yearsAtCompany = inputData.YearsAtCompany || 5;
+    
+    // Apply scoring rules
+    if (age < 25 || age > 55) riskScore += 0.3;
+    if (income < 3000) riskScore += 0.4;
+    if (overtime === 'Yes') riskScore += 0.3;
+    if (distance > 20) riskScore += 0.15;
+    if (jobSatisfaction <= 2) riskScore += 0.3;
+    if (workLifeBalance <= 2) riskScore += 0.25;
+    if (yearsAtCompany < 1 || yearsAtCompany > 20) riskScore += 0.15;
+    
+    const probability = Math.min(riskScore, 0.9);
+    const prediction = probability > 0.5 ? 1 : 0;
+    
+    const result = {
+      success: true,
+      prediction: prediction,
+      prediction_label: prediction === 1 ? "Will Leave" : "Will Stay",
+      probability: {
+        will_stay: 1 - probability,
+        will_leave: probability
       },
-      body: JSON.stringify(inputData)
-    });
-
-    if (!response.ok) {
-      // Jika API Python gagal, catat error dan gunakan fallback
-      const errorText = await response.text();
-      console.error('Python API failed:', response.status, errorText);
-      throw new Error(`Python API responded with ${response.status}: ${errorText}`);
-    }
-
-    // Dapatkan hasil JSON dari API Python
-    const result = await response.json();
-    console.log('Parsed result from Python API:', result);
-
-    if (result.success) {
-      // Sukses! Kembalikan hasil dari model ML
-      return res.status(200).json(result);
-    } else {
-      // Model ML mengembalikan error, gunakan fallback
-      console.error('Python ML model returned error:', result.error);
-      const mockResult = generateMockPrediction(inputData);
-      return res.status(200).json({
-        ...mockResult,
-        note: 'Using fallback prediction due to ML model execution error',
-        model_error: result.error || 'Unknown error from Python'
-      });
-    }
+      risk_level: probability > 0.7 ? "High" : probability > 0.4 ? "Medium" : "Low",
+      confidence: Math.max(probability, 1 - probability),
+      model_type: "Integrated Rule-Based Model",
+      feature_importance: {
+        "Monthly Income": income < 3000 ? 0.4 : 0,
+        "Age": (age < 25 || age > 55) ? 0.3 : 0,
+        "Over Time": overtime === 'Yes' ? 0.3 : 0,
+        "Job Satisfaction": jobSatisfaction <= 2 ? 0.3 : 0,
+        "Work Life Balance": workLifeBalance <= 2 ? 0.25 : 0,
+        "Distance From Home": distance > 20 ? 0.15 : 0,
+        "Years At Company": (yearsAtCompany < 1 || yearsAtCompany > 20) ? 0.15 : 0
+      }
+    };
+    
+    console.log('Generated prediction result:', result);
+    return res.status(200).json(result);
 
   } catch (error) {
-    // Ini menangkap error 'fetch' (mis. timeout, 500) atau error validasi
+    // Handle any errors with validation or processing
     console.error('API error in predict.js:', error);
-    console.error('Attempted to call:', pythonApiUrl);
     console.error('With input data:', inputData);
     
     // Fallback ke mock prediction jika terjadi error
@@ -137,8 +148,7 @@ export default async function handler(req, res) {
     return res.status(200).json({
       ...mockResult,
       note: 'Using fallback prediction due to internal server error',
-      error_details: error.message,
-      attempted_url: pythonApiUrl
+      error_details: error.message
     });
   }
 }
