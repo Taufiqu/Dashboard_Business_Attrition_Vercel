@@ -61,7 +61,7 @@ coverage.xml
 # pyenv
 .python-version
 
-# Machine Learning
+# Machine Learning - exclude general ML artifacts but allow our specific model files
 models/
 *.pkl
 *.joblib
@@ -69,6 +69,10 @@ models/
 *.model
 mlruns/
 artifacts/
+
+# Allow our specific production model files
+!api/python/models/
+!api/python/models/*.pkl
 
 # Temporary files
 temp_input.json
