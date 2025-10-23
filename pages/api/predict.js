@@ -1,156 +1,8 @@
-import { spawn } from 'child_process'
-import path from 'path'
+// Hapus 'spawn' dan 'path' karena tidak lagi digunakan
+// import { spawn } from 'child_process'
+// import path from 'path'
 
-export default async function handler(req, res) {
-  console.log('API predict called with method:', req.method)
-  
-  if (req.method !== 'POST') {
-    return res.status(405).json({ 
-      success: false, 
-      error: 'Method not allowed. Use POST.' 
-    })
-  }
-
-  try {
-    const inputData = req.body
-    console.log('Input data received:', inputData)
-
-    // Validate input data
-    if (!inputData || typeof inputData !== 'object') {
-      console.log('Invalid input data')
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid input data. Expected JSON object.'
-      })
-    }
-
-    // Validate required fields
-    const requiredFields = ['Age', 'DistanceFromHome', 'MonthlyIncome', 'YearsAtCompany']
-    for (const field of requiredFields) {
-      if (!(field in inputData) || inputData[field] === '' || inputData[field] === null) {
-        return res.status(400).json({
-          success: false,
-          error: `Missing required field: ${field}`
-        })
-      }
-    }
-
-    // Path to Python script - use predict_with_model.py
-    const scriptPath = path.join(process.cwd(), 'scripts', 'predict_with_model.py')
-    console.log('Script path:', scriptPath)
-    
-    const isProduction = process.env.NODE_ENV === 'production'
-
-    const pythonExe = isProduction 
-      ? 'python3' 
-      : path.join(process.cwd(), '.venv', 'Scripts', 'python.exe')
-
-    console.log('Using Python executable:', pythonExe)
-    
-    // Spawn Python process
-    const python = spawn(pythonExe, [scriptPath, JSON.stringify(inputData)], {
-      cwd: process.cwd(),
-      stdio: ['pipe', 'pipe', 'pipe']
-    })
-
-    let stdout = ''
-    let stderr = ''
-
-    // Collect stdout
-    python.stdout.on('data', (data) => {
-      stdout += data.toString()
-    })
-
-    // Collect stderr
-    python.stderr.on('data', (data) => {
-      stderr += data.toString()
-    })
-
-    // Handle process completion
-    python.on('close', (code) => {
-      console.log('Python script finished with code:', code)
-      console.log('Stdout:', stdout)
-      if (stderr) console.log('Stderr:', stderr)
-      
-      if (code === 0) {
-        try {
-          // Clean up stdout - remove any extra characters
-          const cleanOutput = stdout.trim()
-          console.log('Clean output:', cleanOutput)
-          
-          const result = JSON.parse(cleanOutput)
-          console.log('Parsed result:', result)
-          
-          return res.status(200).json(result)
-        } catch (parseError) {
-          console.error('Parse error:', parseError)
-          console.log('Falling back to mock prediction due to parse error')
-          
-          // Fallback to mock prediction
-          const mockResult = generateMockPrediction(inputData)
-          return res.status(200).json({
-            ...mockResult,
-            note: 'Using fallback prediction due to ML model parse error'
-          })
-        }
-      } else {
-        console.log('Python script failed, falling back to mock prediction')
-        
-        // Fallback to mock prediction
-        const mockResult = generateMockPrediction(inputData)
-        return res.status(200).json({
-          ...mockResult,
-          note: 'Using fallback prediction due to ML model execution error',
-          model_error: stderr || stdout
-        })
-      }
-    })
-
-    // Handle process error
-    python.on('error', (error) => {
-      console.error('Python process error:', error)
-      console.log('Falling back to mock prediction due to process error')
-      
-      // Fallback to mock prediction
-      const mockResult = generateMockPrediction(inputData)
-      return res.status(200).json({
-        ...mockResult,
-        note: 'Using fallback prediction due to Python process error'
-      })
-    })
-
-    // Set timeout (30 seconds)
-    const timeoutId = setTimeout(() => {
-      python.kill()
-      console.log('Python process timeout, falling back to mock prediction')
-      
-      // Fallback to mock prediction
-      const mockResult = generateMockPrediction(inputData)
-      return res.status(200).json({
-        ...mockResult,
-        note: 'Using fallback prediction due to timeout'
-      })
-    }, 30000)
-
-    // Clear timeout when process completes
-    python.on('close', () => {
-      clearTimeout(timeoutId)
-    })
-
-  } catch (error) {
-    console.error('API error:', error)
-    console.log('Falling back to mock prediction due to API error')
-    
-    // Fallback to mock prediction
-    const mockResult = generateMockPrediction(req.body || {})
-    return res.status(200).json({
-      ...mockResult,
-      note: 'Using fallback prediction due to internal server error'
-    })
-  }
-}
-
-// Mock prediction function as fallback
+// Fungsi fallback Anda (generateMockPrediction) tetap sama, tidak perlu diubah
 function generateMockPrediction(inputData) {
   console.log('Generating mock prediction for:', inputData)
   
@@ -202,4 +54,93 @@ function generateMockPrediction(inputData) {
       "Distance From Home": inputData.DistanceFromHome > 20 ? 0.15 : 0
     }
   };
+}
+
+
+// --- INI ADALAH HANDLER API YANG BARU ---
+export default async function handler(req, res) {
+  console.log('API predict (Node.js) called with method:', req.method);
+  
+  if (req.method !== 'POST') {
+    return res.status(405).json({ 
+      success: false, 
+      error: 'Method not allowed. Use POST.' 
+    });
+  }
+
+  try {
+    const inputData = req.body;
+    console.log('Input data received:', inputData);
+
+    // Validasi inputData Anda tetap di sini
+    const requiredFields = ['Age', 'DistanceFromHome', 'MonthlyIncome', 'YearsAtCompany'];
+    for (const field of requiredFields) {
+      if (!(field in inputData) || inputData[field] === '' || inputData[field] === null) {
+        return res.status(400).json({
+          success: false,
+          error: `Missing required field: ${field}`
+        });
+      }
+    }
+
+    // --- PERUBAHAN UTAMA: HAPUS SPAWN, GUNAKAN FETCH ---
+
+    // Tentukan URL untuk memanggil API Python
+    // Prioritaskan environment variables Vercel
+    const host = process.env.VERCEL_URL 
+      ? `https://${process.env.VERCEL_URL}`
+      : process.env.NEXT_PUBLIC_VERCEL_URL
+        ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
+        : 'http://localhost:3000'; // Untuk local development
+    
+    // Ini akan memanggil function di api/python/predict.py
+    const pythonApiUrl = `${host}/api/python/predict`;
+    console.log('Calling Python ML API at:', pythonApiUrl);
+
+    const response = await fetch(pythonApiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(inputData),
+      timeout: 30000, // Tambahkan timeout 30 detik
+    });
+
+    if (!response.ok) {
+      // Jika API Python gagal, catat error dan gunakan fallback
+      const errorText = await response.text();
+      console.error('Python API failed:', response.status, errorText);
+      throw new Error(`Python API responded with ${response.status}: ${errorText}`);
+    }
+
+    // Dapatkan hasil JSON dari API Python
+    const result = await response.json();
+    console.log('Parsed result from Python API:', result);
+
+    if (result.success) {
+      // Sukses! Kembalikan hasil dari model ML
+      return res.status(200).json(result);
+    } else {
+      // Model ML mengembalikan error, gunakan fallback
+      console.error('Python ML model returned error:', result.error);
+      const mockResult = generateMockPrediction(inputData);
+      return res.status(200).json({
+        ...mockResult,
+        note: 'Using fallback prediction due to ML model execution error',
+        model_error: result.error || 'Unknown error from Python'
+      });
+    }
+
+  } catch (error) {
+    // Ini menangkap error 'fetch' (mis. timeout, 500) atau error validasi
+    console.error('API error in predict.js:', error);
+    
+    // Fallback ke mock prediction jika terjadi error
+    const mockResult = generateMockPrediction(req.body || {});
+    return res.status(200).json({
+      ...mockResult,
+      note: 'Using fallback prediction due to internal server error',
+      error_details: error.message
+    });
+  }
 }

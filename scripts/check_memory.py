@@ -21,7 +21,7 @@ try:
     
     # Impor fungsi dari skrip prediksi Anda
     # Asumsikan check_memory.py ada di folder 'scripts'
-    from predict_with_model import load_model_and_scaler, preprocess_input_data
+    from pages.api.python.predict import load_model_and_scaler, preprocess_input_data
     
 except ImportError as e:
     print(f"Error import: {e}. Pastikan .venv Anda aktif.", file=sys.stderr)
