@@ -92,10 +92,49 @@ export default async function handler(req, res) {
       }
     }
 
-    // --- SIMPLIFIED APPROACH: Skip the fetch call for now and use rule-based logic directly ---
+    // --- TRY TO CALL PYTHON API FIRST ---
     
-    // For now, let's use the same rule-based logic as the Python API
-    // This avoids the internal networking issues between serverless functions
+    try {
+      // Try to call the Python API
+      console.log('Attempting to call Python API...');
+      
+      const pythonApiUrl = `/api/python/predict`;
+      console.log('Calling Python ML API at:', pythonApiUrl);
+
+      const response = await fetch(`${req.headers.origin || 'https://dashboard-business-attrition-vercel-lilac.vercel.app'}${pythonApiUrl}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(inputData)
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Python API response:', result);
+
+        if (result.success) {
+          // Success! Return result from Python ML API
+          return res.status(200).json({
+            ...result,
+            note: 'Prediction from Python ML API'
+          });
+        } else {
+          console.error('Python ML model returned error:', result.error);
+          // Fall through to rule-based logic below
+        }
+      } else {
+        const errorText = await response.text();
+        console.error('Python API failed:', response.status, errorText);
+        // Fall through to rule-based logic below
+      }
+
+    } catch (fetchError) {
+      console.error('Error calling Python API:', fetchError);
+      // Fall through to rule-based logic below
+    }
+
+    // --- FALLBACK TO RULE-BASED LOGIC ---
     
     console.log('Using integrated rule-based prediction logic');
     
