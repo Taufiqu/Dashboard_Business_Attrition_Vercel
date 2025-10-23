@@ -12,13 +12,30 @@ def try_ml_prediction(input_data):
         import numpy as np
         import joblib
         
-        # Load model and scaler
-        model_dir = Path(__file__).parent / 'models'
+        # Debug: Print current working directory and file locations
+        current_dir = Path(__file__).parent
+        model_dir = current_dir / 'models'
         model_path = model_dir / 'rf_model.pkl'
         scaler_path = model_dir / 'scaler.pkl'
         
+        print(f"Current file: {__file__}", file=sys.stderr)
+        print(f"Current dir: {current_dir}", file=sys.stderr)
+        print(f"Model dir: {model_dir}", file=sys.stderr)
+        print(f"Model path exists: {model_path.exists()}", file=sys.stderr)
+        print(f"Scaler path exists: {scaler_path.exists()}", file=sys.stderr)
+        
+        # List files in the directory
+        try:
+            files_in_dir = list(current_dir.iterdir())
+            print(f"Files in current dir: {files_in_dir}", file=sys.stderr)
+            if model_dir.exists():
+                model_files = list(model_dir.iterdir())
+                print(f"Files in model dir: {model_files}", file=sys.stderr)
+        except Exception as list_error:
+            print(f"Error listing files: {list_error}", file=sys.stderr)
+        
         if not model_path.exists() or not scaler_path.exists():
-            return None, "ML model files not found"
+            return None, f"ML model files not found - model: {model_path.exists()}, scaler: {scaler_path.exists()}"
         
         model = joblib.load(model_path)
         scaler = joblib.load(scaler_path)
