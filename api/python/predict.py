@@ -3,6 +3,120 @@ import json
 import sys
 import os
 
+def get_feature_columns():
+    """Return the exact 47 feature columns that the model expects"""
+    return [
+        'EmployeeId', 'Age', 'DailyRate', 'DistanceFromHome', 'Education', 
+        'EmployeeCount', 'EnvironmentSatisfaction', 'HourlyRate', 'JobInvolvement',
+        'JobLevel', 'JobSatisfaction', 'MonthlyIncome', 'MonthlyRate',
+        'NumCompaniesWorked', 'PercentSalaryHike', 'PerformanceRating',
+        'RelationshipSatisfaction', 'StandardHours', 'StockOptionLevel',
+        'TotalWorkingYears', 'TrainingTimesLastYear', 'WorkLifeBalance',
+        'YearsAtCompany', 'YearsInCurrentRole', 'YearsSinceLastPromotion',
+        'YearsWithCurrManager',
+        'BusinessTravel_Travel_Frequently', 'BusinessTravel_Travel_Rarely',
+        'Department_Research & Development', 'Department_Sales',
+        'EducationField_Life Sciences', 'EducationField_Marketing',
+        'EducationField_Medical', 'EducationField_Other', 'EducationField_Technical Degree',
+        'Gender_Male',
+        'JobRole_Human Resources', 'JobRole_Laboratory Technician', 'JobRole_Manager',
+        'JobRole_Manufacturing Director', 'JobRole_Research Director', 'JobRole_Research Scientist',
+        'JobRole_Sales Executive', 'JobRole_Sales Representative',
+        'MaritalStatus_Married', 'MaritalStatus_Single',
+        'OverTime_Yes'
+    ]
+
+def preprocess_input_data(input_data):
+    """Preprocess input data to match exact training format"""
+    try:
+        import pandas as pd
+        
+        expected_columns = get_feature_columns()
+        result_df = pd.DataFrame(0, index=[0], columns=expected_columns)
+        
+        # Handle EmployeeNumber/EmployeeId
+        if 'EmployeeNumber' in input_data:
+            input_data['EmployeeId'] = input_data['EmployeeNumber']
+        
+        # Fill numerical columns
+        numerical_columns = [
+            'EmployeeId', 'Age', 'DailyRate', 'DistanceFromHome', 'Education',
+            'EmployeeCount', 'EnvironmentSatisfaction', 'HourlyRate', 'JobInvolvement',
+            'JobLevel', 'JobSatisfaction', 'MonthlyIncome', 'MonthlyRate',
+            'NumCompaniesWorked', 'PercentSalaryHike', 'PerformanceRating',
+            'RelationshipSatisfaction', 'StandardHours', 'StockOptionLevel',
+            'TotalWorkingYears', 'TrainingTimesLastYear', 'WorkLifeBalance',
+            'YearsAtCompany', 'YearsInCurrentRole', 'YearsSinceLastPromotion',
+            'YearsWithCurrManager'
+        ]
+        
+        for col in numerical_columns:
+            if col in input_data:
+                val = input_data[col]
+                result_df[col] = float(val) if val not in [None, ''] else 0.0
+        
+        # Set default values for required fields
+        result_df['EmployeeCount'] = 1
+        result_df['StandardHours'] = 80
+        
+        # Handle categorical columns with one-hot encoding
+        if input_data.get('BusinessTravel') == 'Travel_Frequently':
+            result_df['BusinessTravel_Travel_Frequently'] = 1
+        elif input_data.get('BusinessTravel') == 'Travel_Rarely':
+            result_df['BusinessTravel_Travel_Rarely'] = 1
+            
+        if input_data.get('Department') == 'Research & Development':
+            result_df['Department_Research & Development'] = 1
+        elif input_data.get('Department') == 'Sales':
+            result_df['Department_Sales'] = 1
+            
+        if input_data.get('EducationField') == 'Life Sciences':
+            result_df['EducationField_Life Sciences'] = 1
+        elif input_data.get('EducationField') == 'Marketing':
+            result_df['EducationField_Marketing'] = 1
+        elif input_data.get('EducationField') == 'Medical':
+            result_df['EducationField_Medical'] = 1
+        elif input_data.get('EducationField') == 'Other':
+            result_df['EducationField_Other'] = 1
+        elif input_data.get('EducationField') == 'Technical Degree':
+            result_df['EducationField_Technical Degree'] = 1
+            
+        if input_data.get('Gender') == 'Male':
+            result_df['Gender_Male'] = 1
+            
+        # Job roles
+        job_role = input_data.get('JobRole', '')
+        if job_role == 'Human Resources':
+            result_df['JobRole_Human Resources'] = 1
+        elif job_role == 'Laboratory Technician':
+            result_df['JobRole_Laboratory Technician'] = 1
+        elif job_role == 'Manager':
+            result_df['JobRole_Manager'] = 1
+        elif job_role == 'Manufacturing Director':
+            result_df['JobRole_Manufacturing Director'] = 1
+        elif job_role == 'Research Director':
+            result_df['JobRole_Research Director'] = 1
+        elif job_role == 'Research Scientist':
+            result_df['JobRole_Research Scientist'] = 1
+        elif job_role == 'Sales Executive':
+            result_df['JobRole_Sales Executive'] = 1
+        elif job_role == 'Sales Representative':
+            result_df['JobRole_Sales Representative'] = 1
+            
+        if input_data.get('MaritalStatus') == 'Married':
+            result_df['MaritalStatus_Married'] = 1
+        elif input_data.get('MaritalStatus') == 'Single':
+            result_df['MaritalStatus_Single'] = 1
+            
+        if input_data.get('OverTime') == 'Yes':
+            result_df['OverTime_Yes'] = 1
+        
+        return result_df
+        
+    except Exception as e:
+        print(f"Error preprocessing data: {e}", file=sys.stderr)
+        return None
+
 def try_ml_prediction(input_data):
     """Try to use the ML model first"""
     try:
@@ -37,30 +151,30 @@ def try_ml_prediction(input_data):
         if not model_path.exists() or not scaler_path.exists():
             return None, f"ML model files not found - model: {model_path.exists()}, scaler: {scaler_path.exists()}"
         
+        # Load model and scaler
         model = joblib.load(model_path)
         scaler = joblib.load(scaler_path)
         
-        # Process input data for ML model (simplified version)
-        # Create a basic feature vector with the most important features
-        features = [
-            input_data.get('Age', 30),
-            input_data.get('MonthlyIncome', 5000), 
-            input_data.get('DistanceFromHome', 5),
-            input_data.get('YearsAtCompany', 5),
-            1 if input_data.get('OverTime', 'No') == 'Yes' else 0,
-            input_data.get('JobSatisfaction', 3),
-            input_data.get('WorkLifeBalance', 3)
-        ]
+        # Preprocess input data to 47 features
+        processed_data = preprocess_input_data(input_data)
+        if processed_data is None:
+            return None, "Failed to preprocess input data"
         
-        # For a full 47-feature model, we'd need to pad with defaults
-        # For now, let's try with basic features and see if it works
-        feature_array = np.array(features).reshape(1, -1)
+        print(f"Processed data shape: {processed_data.shape}", file=sys.stderr)
+        print(f"Processed data columns: {list(processed_data.columns)}", file=sys.stderr)
         
-        # This might fail if the model expects 47 features
-        # That's okay, we'll fall back to rule-based
-        scaled_features = scaler.transform(feature_array)
-        prediction = model.predict(scaled_features)[0]
-        prediction_proba = model.predict_proba(scaled_features)[0]
+        # Scale and predict
+        scaled_data = scaler.transform(processed_data)
+        prediction = model.predict(scaled_data)[0]
+        prediction_proba = model.predict_proba(scaled_data)[0]
+        
+        # Get feature importance
+        feature_names = processed_data.columns.tolist()
+        feature_importance = dict(zip(feature_names, model.feature_importances_))
+        top_features = dict(sorted(feature_importance.items(), key=lambda x: x[1], reverse=True)[:10])
+        
+        attrition_prob = prediction_proba[1]
+        risk_level = "High" if attrition_prob > 0.7 else "Medium" if attrition_prob > 0.4 else "Low"
         
         return {
             "success": True,
@@ -70,9 +184,10 @@ def try_ml_prediction(input_data):
                 "will_stay": float(prediction_proba[0]),
                 "will_leave": float(prediction_proba[1])
             },
-            "risk_level": "High" if prediction_proba[1] > 0.7 else "Medium" if prediction_proba[1] > 0.4 else "Low",
+            "risk_level": risk_level,
             "confidence": float(max(prediction_proba)),
-            "model_type": "Random Forest ML Model (Python)"
+            "model_type": "Random Forest ML Model (47 Features)",
+            "top_feature_importance": top_features
         }, None
         
     except Exception as e:
