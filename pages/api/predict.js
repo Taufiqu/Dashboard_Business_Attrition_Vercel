@@ -60,11 +60,20 @@ function generateMockPrediction(inputData) {
 // --- INI ADALAH HANDLER API YANG BARU ---
 export default async function handler(req, res) {
   console.log('API predict (Node.js) called with method:', req.method);
+  console.log('Request headers:', req.headers);
+  console.log('Request body type:', typeof req.body);
+  console.log('Request body:', req.body);
   
   if (req.method !== 'POST') {
+    console.log('Method not allowed - returning 405');
     return res.status(405).json({ 
       success: false, 
-      error: 'Method not allowed. Use POST.' 
+      error: 'Method not allowed. Use POST.',
+      received_method: req.method,
+      debug_info: {
+        headers: req.headers,
+        body: req.body
+      }
     });
   }
 
