@@ -6,7 +6,6 @@ import numpy as np
 from pathlib import Path
 import joblib
 from sklearn.preprocessing import StandardScaler
-# Removed unused BaseHTTPRequestHandler import
 import time
 
 # --- Salin SEMUA fungsi helper Anda dari skrip lama ---
@@ -196,50 +195,54 @@ def predict_attrition(input_data):
         }
 
 # --- Vercel Serverless Function Handler ---
-def handler(request):
-    """
-    Vercel serverless function handler for Python
-    """
-    try:
-        # Parse request body
-        if hasattr(request, 'get_json'):
-            # Vercel request format
-            input_data = request.get_json()
-        else:
-            # Alternative parsing
-            import json
-            body = request.body if hasattr(request, 'body') else request.data
-            if isinstance(body, bytes):
-                body = body.decode('utf-8')
-            input_data = json.loads(body) if isinstance(body, str) else body
-        
-        # Run prediction
-        result = predict_attrition(input_data)
-        
-        # Return JSON response
-        return {
-            'statusCode': 200,
-            'headers': {
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'POST, OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type'
-            },
-            'body': json.dumps(result)
-        }
-        
-    except Exception as e:
-        # Handle errors
-        error_result = {
-            "success": False,
-            "error": f"Internal server error in Python: {str(e)}",
-            "error_type": type(e).__name__
-        }
-        return {
-            'statusCode': 500,
-            'headers': {
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'
-            },
-            'body': json.dumps(error_result)
-        }
+from http.server import BaseHTTPRequestHandler
+import json
+
+class handler(BaseHTTPRequestHandler):
+    def do_POST(self):
+        try:
+            # Read the request body
+            content_length = int(self.headers['Content-Length'])
+            post_data = self.rfile.read(content_length)
+            
+            # Parse JSON data
+            input_data = json.loads(post_data.decode('utf-8'))
+            
+            # Run prediction
+            result = predict_attrition(input_data)
+            
+            # Send response
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.send_header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+            self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+            self.end_headers()
+            
+            # Write response body
+            response_data = json.dumps(result).encode('utf-8')
+            self.wfile.write(response_data)
+            
+        except Exception as e:
+            # Handle errors
+            error_result = {
+                "success": False,
+                "error": f"Internal server error in Python: {str(e)}",
+                "error_type": type(e).__name__
+            }
+            
+            self.send_response(500)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            
+            response_data = json.dumps(error_result).encode('utf-8')
+            self.wfile.write(response_data)
+    
+    def do_OPTIONS(self):
+        # Handle CORS preflight requests
+        self.send_response(200)
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        self.end_headers()
